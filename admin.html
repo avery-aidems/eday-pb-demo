@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>Phone bank admin (demo)</title>
+<link rel="stylesheet" href="admin.css?v=df4315984a">
+</head>
+<body>
+<noscript><p class="fatal">This page needs JavaScript.</p></noscript>
+
+<div id="gate" class="fatal" hidden></div>
+
+<div id="app" hidden>
+<header class="top">
+  <h1>Phone bank admin</h1>
+  <span id="whoami" class="muted"></span>
+  <nav>
+    <a href="#sec-dash">Dashboard</a>
+    <a href="#sec-claims">Claims</a>
+    <a href="#sec-requeue">Requeue</a>
+    <a href="#sec-vols">Volunteers</a>
+    <a href="#sec-config">Settings</a>
+    <a href="#sec-suppress">Suppress</a>
+    <a href="#sec-export">Export</a>
+    <a href="#sec-backup">Backup</a>
+    <a href="#sec-audit">Audit</a>
+  </nav>
+</header>
+
+<main>
+
+<!-- 1. Dashboard -->
+<section id="sec-dash">
+  <h2>Dashboard</h2>
+  <div id="dash-status" class="muted small">Loading...</div>
+
+  <div id="banner" class="banner closed">
+    <div class="banner-text" id="banner-text">...</div>
+    <button id="banner-btn" type="button" disabled>...</button>
+  </div>
+  <div id="open-panel" class="panel warn-panel" hidden>
+    <p><strong>Open calling to volunteers?</strong></p>
+    <ul id="open-warnings"></ul>
+    <label>Type <code>OPEN</code> to confirm:
+      <input id="open-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    </label>
+    <button id="open-confirm" type="button" disabled>Open calling</button>
+    <button id="open-cancel" type="button" class="secondary">Cancel</button>
+    <span id="open-msg" class="msg"></span>
+  </div>
+
+  <div class="row">
+    <div id="kind-badge" class="badge kind-empty">data: ...</div>
+    <div class="muted small" id="server-now"></div>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="grid2">
+    <div>
+      <h3>Households by pool and status</h3>
+      <div class="tablewrap"><table id="tbl-households"></table></div>
+      <p class="muted small">ready_eligible = ready and callable right now (retry delay passed).</p>
+    </div>
+    <div>
+      <h3>Voters</h3>
+      <div class="tablewrap"><table id="tbl-voters"></table></div>
+      <h3>Next retry eligible</h3>
+      <div class="tablewrap"><table id="tbl-next"></table></div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div>
+      <h3>Attempts per household</h3>
+      <div id="hist" class="bars"></div>
+    </div>
+    <div>
+      <h3>Outcomes</h3>
+      <div class="tablewrap"><table id="tbl-outcomes"></table></div>
+    </div>
+    <div>
+      <h3>Calls per 15 min (ET)</h3>
+      <div id="per15" class="bars scroll"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. Live claims -->
+<section id="sec-claims">
+  <h2>Live claims</h2>
+  <p class="muted small">Release: if the volunteer has not dialed yet, the household goes back to the queue with no attempt counted. If they already dialed, it counts as an attempt and the retry delay applies.</p>
+  <div class="tablewrap"><table id="tbl-claims"></table></div>
+  <div id="claims-msg" class="msg"></div>
+</section>
+
+<!-- 3. Requeue -->
+<section id="sec-requeue">
+  <h2>Requeue a household</h2>
+  <p class="muted small">Makes a ready, done or exhausted household callable now. Refused if it is currently claimed or has no open voters. Audited.</p>
+  <form id="requeue-form" class="inline-form">
+    <label>Phone (10 digits) <input id="rq-phone" type="text" inputmode="tel" autocomplete="off" required></label>
+    <label>Reason (required) <input id="rq-reason" type="text" autocomplete="off" required size="36"></label>
+    <button type="submit">Requeue</button>
+    <span id="rq-msg" class="msg"></span>
+  </form>
+</section>
+
+<!-- 4. Volunteers -->
+<section id="sec-vols">
+  <h2>Volunteers</h2>
+  <form id="vol-form" class="inline-form">
+    <label>Name <input id="vol-name" type="text" autocomplete="off" required></label>
+    <label>Pool
+      <select id="vol-pool"><option value="main">main</option><option value="vbm">vbm</option></select>
+    </label>
+    <button type="submit">Create volunteer</button>
+    <span id="vol-msg" class="msg"></span>
+  </form>
+  <div id="vol-link-box" class="panel warn-panel" hidden>
+    <p><strong id="vol-link-title">Personal link</strong></p>
+    <p class="warn-text">This link won't be shown again. Copy it now and send it to the volunteer.</p>
+    <input id="vol-link" type="text" readonly class="wide">
+    <button id="vol-copy" type="button">Copy</button>
+    <button id="vol-link-done" type="button" class="secondary">Done (hide link)</button>
+    <span id="vol-copy-msg" class="msg"></span>
+  </div>
+  <div class="row"><button id="vol-refresh" type="button" class="secondary">Refresh list</button><span id="vol-list-msg" class="msg"></span></div>
+  <div class="tablewrap"><table id="tbl-vols"></table></div>
+</section>
+
+<!-- 5. Config -->
+<section id="sec-config">
+  <h2>Content &amp; settings</h2>
+  <div id="paid-warn" class="panel warn-panel" hidden><strong>"Paid for by" is empty.</strong> Calling should not open until this is set.</div>
+  <div class="row"><button id="cfg-reload" type="button" class="secondary">Reload from server</button><span id="cfg-msg" class="msg"></span></div>
+
+  <h3>Script preview</h3>
+  <div class="panel">
+    <label>Script
+      <select id="pv-select"></select>
+    </label>
+    <p class="muted small">Renders the text currently typed in the box (saved or not) with sample values: voter_first = Ana, volunteer_first = Sam, polling_place = Oviedo City Hall, polling_address = 400 Alexandria Blvd, Oviedo, paid_for_by = the box below.</p>
+    <div id="pv-notes" class="small"></div>
+    <div id="pv-out" class="preview"></div>
+  </div>
+
+  <div id="cfg-fields"></div>
+</section>
+
+<!-- 6. Suppression -->
+<section id="sec-suppress">
+  <h2>Suppression upload</h2>
+  <p class="muted small">CSV with a <code>VANID</code> column (header not case sensitive), or a one-column file of numbers. Parsed in your browser. VANIDs are not displayed.</p>
+  <div class="inline-form">
+    <label>File <input id="sup-file" type="file" accept=".csv,.txt,text/csv,text/plain"></label>
+    <label>Reason (required) <input id="sup-reason" type="text" autocomplete="off" size="36"></label>
+  </div>
+  <div id="sup-parsed" class="small"></div>
+  <div class="row">
+    <button id="sup-preview" type="button" disabled>Preview</button>
+    <span id="sup-msg" class="msg"></span>
+  </div>
+  <div id="sup-result" class="panel" hidden>
+    <div class="tablewrap"><table id="tbl-sup"></table></div>
+    <div id="sup-cap" class="warn-text" hidden>
+      This would suppress more than 25% of open voters.
+      <label class="check"><input id="sup-force" type="checkbox"> Force it anyway</label>
+    </div>
+    <button id="sup-confirm" type="button">Confirm suppression</button>
+    <span id="sup-msg2" class="msg"></span>
+  </div>
+</section>
+
+<!-- 7. Export -->
+<section id="sec-export">
+  <h2>Export to VAN</h2>
+  <p class="muted small">Each result goes into exactly one batch. Batches can be downloaded again at any time.</p>
+  <div class="row"><button id="exp-new" type="button">Export new batch</button><span id="exp-msg" class="msg"></span></div>
+  <h3>Batches</h3>
+  <div class="row"><button id="exp-refresh" type="button" class="secondary">Refresh list</button></div>
+  <div class="tablewrap"><table id="tbl-batches"></table></div>
+</section>
+
+<!-- 8. Backup -->
+<section id="sec-backup">
+  <h2>Backup</h2>
+  <p class="muted small">The backup file contains voter data (names, phones). Keep it in the project folder only.</p>
+  <div class="row"><button id="bk-btn" type="button">Download backup (JSON)</button><span id="bk-msg" class="msg"></span></div>
+</section>
+
+<!-- 9. Audit -->
+<section id="sec-audit">
+  <h2>Recent audit</h2>
+  <details id="audit-details">
+    <summary>Show last 50 entries</summary>
+    <div class="row"><button id="audit-refresh" type="button" class="secondary">Refresh</button><span id="audit-msg" class="msg"></span></div>
+    <div class="tablewrap"><table id="tbl-audit"></table></div>
+  </details>
+</section>
+
+</main>
+</div>
+
+<script src="config.js?v=249f86f661"></script>
+<script src="demo-data.js?v=8bb149706a"></script>
+<script src="mock-backend.js?v=336b1c0f79"></script>
+<script src="admin.js?v=9caf8cdf97"></script>
+</body>
+</html>

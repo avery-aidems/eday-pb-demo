@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="theme-color" content="#0b2e6f">
+<title>Phone Bank (demo)</title>
+<link rel="stylesheet" href="styles.css?v=eeeac811d2">
+</head>
+<body>
+<div class="app">
+  <header id="hdr" class="hdr" hidden></header>
+  <div id="badge" class="unsaved" role="status" aria-live="polite" hidden></div>
+  <main id="main" class="main" aria-live="polite">
+    <p class="muted center">Loading&hellip;</p>
+  </main>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<noscript><p class="notice">This page needs JavaScript.</p></noscript>
+<script src="config.js?v=249f86f661"></script>
+<script src="demo-data.js?v=8bb149706a"></script>
+<script src="mock-backend.js?v=336b1c0f79"></script>
+<script src="app.js?v=26dab2f2be"></script>
+</body>
+</html>
